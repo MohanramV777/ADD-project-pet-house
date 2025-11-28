@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pet House Adoption Center</title>
+<style>
+    body { font-family: Arial; padding: 20px; background: linear-gradient(to bottom right, #fce3ff, #d9eaff); min-height: 100vh; }
+    h1,h2 { text-align:center; color:#2c3e50; }
+    nav { text-align:center; margin-bottom:20px; }
+    nav button { padding:10px 25px; margin:5px; font-size:16px; background:#0066ff; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.3s; }
+    nav button:hover { background:#0047b3; transform:scale(1.1); }
+    #pet-list, #adopted-list { display:flex; justify-content:center; flex-wrap:wrap; gap:20px; }
+    .pet-box { border:2px solid #333; padding:10px; border-radius:10px; width:260px; text-align:center; background:white; box-shadow:0px 5px 12px rgba(0,0,0,0.2); cursor:pointer; transition:0.3s; }
+    .pet-box:hover { transform:translateY(-10px) scale(1.05); box-shadow:0px 12px 25px rgba(0,0,0,0.3); }
+    .hidden { display:none; }
+    .err { color:red; font-size:16px; margin-left:5px; }
+
+    /* Popups */
+    #petPopup, #adoptPopup {
+        position:fixed; top:0; left:0; width:100%; height:100%;
+        background: rgba(0,0,0,0.7); display:none;
+        align-items:center; justify-content:center; z-index:9999;
+    }
+    #petPopupContent, #adoptPopupContent {
+        background:white; padding:20px; border-radius:10px; width:300px; text-align:center; position:relative;
+    }
+    #closePopup, #closeAdoptPopup { position:absolute; top:5px; right:10px; font-size:20px; cursor:pointer; color:#333; }
+    #petPopupContent button, #adoptPopupContent button { margin-top:15px; background:#ff6600; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<h1>🐾 Pet House Adoption Center</h1>
+
+<nav>
+    <button onclick="showPage('homePage')">Home</button>
+    <button onclick="showPage('addPetPage')">Add Pet</button>
+    <button onclick="showPage('customerPage')">Customer Records</button>
+</nav>
+
+<div id="homePage">
+    <h2>Available Pets</h2>
+    <div id="pet-list"></div>
+</div>
+
+<div id="addPetPage" class="hidden">
+    <h2>Add New Pet</h2>
+    <form id="petForm">
+        <label>Pet Type:<br> <input type="text" id="petType"></label>
+        <span id="typeErr" class="err"></span><br><br>
+
+        <label>Breed:<br> <input type="text" id="petBreed"></label>
+        <span id="breedErr" class="err"></span><br><br>
+
+        <label>Colour:<br> <input type="text" id="petColour"></label>
+        <span id="colourErr" class="err"></span><br><br>
+
+        <label>Age:<br> <input type="text" id="petAge"></label>
+        <span id="ageErr" class="err"></span><br><br>
+
+        <button type="button" onclick="addPet()">Add Pet</button>
+    </form>
+</div>
+
+<div id="customerPage" class="hidden">
+    <h2>Customer & Adoption Records</h2>
+    <div id="adopted-list"></div>
+</div>
+
+<!-- Pet Details Popup -->
+<div id="petPopup">
+    <div id="petPopupContent">
+        <span id="closePopup" onclick="closePopup()">×</span>
+        <h3 id="popupType"></h3>
+        <p><b>Breed:</b> <span id="popupBreed"></span></p>
+        <p><b>Colour:</b> <span id="popupColour"></span></p>
+        <p><b>Age:</b> <span id="popupAge"></span></p>
+        <button onclick="openAdoptPopup()">Adopt</button>
+    </div>
+</div>
+
+<!-- Adoption Form Popup -->
+<div id="adoptPopup">
+    <div id="adoptPopupContent">
+        <span id="closeAdoptPopup" onclick="closeAdoptPopup()">×</span>
+        <h3>Adoption Form</h3>
+        <form id="adoptForm">
+            <label>Name:<br> <input type="text" id="name"></label>
+            <span id="nameErr" class="err"></span><br><br>
+
+            <label>Email:<br> <input type="email" id="email"></label>
+            <span id="emailErr" class="err"></span><br><br>
+
+            <label>Address:<br> <input type="text" id="address"></label>
+            <span id="addressErr" class="err"></span><br><br>
+
+            <label>Phone:<br> <input type="text" id="phone"></label>
+            <span id="phoneErr" class="err"></span><br><br>
+
+            <button type="button" onclick="adopt()">Submit</button>
+        </form>
+    </div>
+</div>
+
+<script>
+let selectedPet = null;
+
+function showPage(page){
+    document.getElementById("homePage").classList.add("hidden");
+    document.getElementById("addPetPage").classList.add("hidden");
+    document.getElementById("customerPage").classList.add("hidden");
+    document.getElementById(page).classList.remove("hidden");
+
+    if(page==="homePage") loadPets();
+    if(page==="customerPage") loadAdoptions();
+}
+
+// Load Pets
+function loadPets(){
+    let pets = JSON.parse(localStorage.getItem("pets") || "[]");
+    if(pets.length===0){
+        pets = [
+            { type:"Dog", breed:"Labrador", colour:"Brown", age:"2 Years" },
+            { type:"Cat", breed:"Persian", colour:"White", age:"1 Year" }
+        ];
+        localStorage.setItem("pets", JSON.stringify(pets));
+    }
+
+    let list = document.getElementById("pet-list");
+    list.innerHTML = "";
+
+    pets.forEach(p => {
+        let div = document.createElement("div");
+        div.className="pet-box";
+        div.innerHTML = `<h3>${p.type}</h3>
+                         <p><b>Breed:</b> ${p.breed}</p>
+                         <p><b>Colour:</b> ${p.colour}</p>
+                         <p><b>Age:</b> ${p.age}</p>`;
+        div.onclick = ()=> openPopup(p);
+        list.appendChild(div);
+    });
+}
+
+// Add Pet
+function addPet(){
+    let type=document.getElementById("petType").value;
+    let breed=document.getElementById("petBreed").value;
+    let colour=document.getElementById("petColour").value;
+    let age=document.getElementById("petAge").value;
+
+    let valid=true;
+    ["type","breed","colour","age"].forEach(f=>document.getElementById(f+"Err").innerText="");
+
+    if(type===""){ typeErr.innerText="*"; valid=false;}
+    if(breed===""){ breedErr.innerText="*"; valid=false;}
+    if(colour===""){ colourErr.innerText="*"; valid=false;}
+    if(age===""){ ageErr.innerText="*"; valid=false;}
+    if(!valid) return;
+
+    let pets = JSON.parse(localStorage.getItem("pets") || "[]");
+    pets.push({type,breed,colour,age});
+    localStorage.setItem("pets", JSON.stringify(pets));
+    alert("Pet Added Successfully!");
+    showPage("homePage");
+    loadPets();
+}
+
+// Pet Popup
+function openPopup(p){
+    selectedPet = p;
+    document.getElementById("popupType").innerText = p.type;
+    document.getElementById("popupBreed").innerText = p.breed;
+    document.getElementById("popupColour").innerText = p.colour;
+    document.getElementById("popupAge").innerText = p.age;
+    document.getElementById("petPopup").style.display = "flex";
+}
+function closePopup(){ document.getElementById("petPopup").style.display="none"; }
+
+// Adoption Popup
+function openAdoptPopup(){
+    closePopup();
+    document.getElementById("adoptPopup").style.display="flex";
+}
+function closeAdoptPopup(){ document.getElementById("adoptPopup").style.display="none"; }
+
+// Adoption Form
+function adopt(){
+    let name=document.getElementById("name").value;
+    let email=document.getElementById("email").value;
+    let address=document.getElementById("address").value;
+    let phone=document.getElementById("phone").value;
+
+    let valid=true;
+    ["name","email","address","phone"].forEach(f=>document.getElementById(f+"Err").innerText="");
+
+    if(name===""){ nameErr.innerText="*"; valid=false;}
+    if(email===""){ emailErr.innerText="*"; valid=false;}
+    if(address===""){ addressErr.innerText="*"; valid=false;}
+    if(phone===""){ phoneErr.innerText="*"; valid=false;}
+    if(!valid) return;
+
+    let adopted = JSON.parse(localStorage.getItem("adoptions") || "[]");
+    adopted.push({name,email,address,phone,pet:selectedPet});
+    localStorage.setItem("adoptions", JSON.stringify(adopted));
+
+    alert("Adoption Successful!");
+    closeAdoptPopup();
+    showPage("customerPage");
+    loadAdoptions();
+}
+
+// Load Adoptions
+function loadAdoptions(){
+    let adopted = JSON.parse(localStorage.getItem("adoptions") || "[]");
+    let div = document.getElementById("adopted-list");
+    div.innerHTML = "";
+    adopted.forEach(a=>{
+        div.innerHTML += `<div class="pet-box">
+                            <p><b>Name:</b> ${a.name}</p>
+                            <p><b>Email:</b> ${a.email}</p>
+                            <p><b>Address:</b> ${a.address}</p>
+                            <p><b>Phone:</b> ${a.phone}</p>
+                            <p><b>Pet:</b> ${a.pet.type} (${a.pet.breed})</p>
+                          </div>`;
+    });
+}
+
+window.onload = ()=>{ loadPets(); };
+</script>
+</body>
+</html>
+
